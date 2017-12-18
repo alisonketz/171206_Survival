@@ -36,7 +36,6 @@ d.cap=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Captures_adult_form_20
 d.fawncap=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Fawn Capture")
 d.mort=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Mortalities")
 d.cens=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Censor")
-d.cap.ramalt=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "CapRAMALT")
 
 
 names(d.fawncap)=tolower(gsub("[[:punct:]]","",names(d.fawncap)))
@@ -131,88 +130,101 @@ n.fawncap=dim(d.fawncap)[1]
 ### initial format of data - rows = individuals, cols = (e_i,r_i,s_i,censor)
 ###
 
+#making dates discrete for fitting model
+d.cap$dateDis = (week(d.cap$date) - start.week + 1)
+d.mort$estMortDateDis = (week(d.mort$estMortDate) - start.week + 1)
+d.cens$censorDateDis = (week(d.cens$censorDate) - start.week + 1)
+d.fawncap$dateDis = (week(d.fawncap$date) - start.week + 1)
+
+
 #making dates continuous
 d.cap$dateCts = (week(d.cap$date) - start.week + 1)+(wday(d.cap$date)%%7)/7
 d.mort$estMortDateCts = (week(d.mort$estMortDate) - start.week + 1)+(wday(d.mort$estMortDate)%%7)/7
 d.cens$censorDateCts = (week(d.cens$censorDate) - start.week + 1)+(wday(d.cens$censorDate)%%7)/7
-d.fawncap$date = (week(d.fawncap$date) - start.week + 1)+(wday(d.fawncap$date)%%7)/7
+d.fawncap$dateCts = (week(d.fawncap$date) - start.week + 1)+(wday(d.fawncap$date)%%7)/7
 
 
+
+
+
+
+
+
+##########################################################################################################
 ###
 ### lumping adults and fawns together
 ###
-
-
-
-#initialize matrix of captures/recaptures/morts
-N.temp = matrix(NA,nr=n.cap+n.fawncap,nc = 4)
-
-#initialize with all animals alive
-N.temp[,4] = 1
-
-
-for(i in 1:n.cap){
-    N.temp[i,1] = d.cap$dateCts[i]
-    for(j in 1:n.mort){
-        if(d.cap$lowTag[i]==d.mort$lowtag[j]){
-            N.temp[i,3] = d.mort$estMortDateCts[j]
-            N.temp[i,2] = d.mort$estMortDateCts[j]-1/7
-            N.temp[i,4] = 0
-        }
-    }
-}
-
-
-for(i in 1:n.fawncap){
-    N.temp[n.cap+i,1] = d.cap$dateCts[i]
-    for(j in 1:n.mort){
-        if(d.fawncap$lowtag[i]==d.mort$lowtag[j]){
-            N.temp[i+n.cap,3] = d.mort$estMortDateCts[j]
-            N.temp[i+n.cap,2] = d.mort$estMortDateCts[j]-1/7
-            N.temp[i+n.cap,4] = 0
-        }
-    }
-}
-
-
+##########################################################################################################
 # 
-# for(k in 1:n.cens){
-#     if(d.cap$lowTag[i]==d.cens$lowtag[k]){
-#         N.temp[i,2] = Inf
+# #initialize matrix of captures/recaptures/morts
+# N.temp = matrix(NA,nr=n.cap+n.fawncap,nc = 4)
+# 
+# #initialize with all animals alive
+# N.temp[,4] = 1
+# 
+# 
+# for(i in 1:n.cap){
+#     N.temp[i,1] = d.cap$dateCts[i]
+#     for(j in 1:n.mort){
+#         if(d.cap$lowTag[i]==d.mort$lowtag[j]){
+#             N.temp[i,3] = d.mort$estMortDateCts[j]
+#             N.temp[i,2] = d.mort$estMortDateCts[j]-1/7
+#             N.temp[i,4] = 0
+#         }
 #     }
 # }
-
-
-
-N.temp
-for(i in 1:(n.cap+n.fawncap)){
-    if(is.na(N.temp[i,2]))N.temp[i,2]=Inf
-    if(is.na(N.temp[i,3]))N.temp[i,3]=Inf
-}
-
-N.temp
-
-###
-### Format data matrix to fit into jags
-###
-
-N.data.fit = matrix(NA,nr=n.cap+n.fawncap+n.mort,ncol=3)
-
-indx = 1
-for(i in 1:(n.cap+n.fawncap)){
-    if(N.temp[i,4]==1){
-        N.data.fit[indx,] = c(N.temp[i,1:2],1)
-        indx=indx+1
-    }
-    if(N.temp[i,4]==0){
-        N.data.fit[indx,] = c(N.temp[i,1:2],1)
-        indx=indx+1
-        N.data.fit[indx,] = c(N.temp[i,2:3],0)
-        indx=indx+1
-    }
-}
-
-N.data.fit
+# 
+# 
+# for(i in 1:n.fawncap){
+#     N.temp[n.cap+i,1] = d.cap$dateCts[i]
+#     for(j in 1:n.mort){
+#         if(d.fawncap$lowtag[i]==d.mort$lowtag[j]){
+#             N.temp[i+n.cap,3] = d.mort$estMortDateCts[j]
+#             N.temp[i+n.cap,2] = d.mort$estMortDateCts[j]-1/7
+#             N.temp[i+n.cap,4] = 0
+#         }
+#     }
+# }
+# 
+# 
+# # 
+# # for(k in 1:n.cens){
+# #     if(d.cap$lowTag[i]==d.cens$lowtag[k]){
+# #         N.temp[i,2] = Inf
+# #     }
+# # }
+# 
+# 
+# 
+# N.temp
+# for(i in 1:(n.cap+n.fawncap)){
+#     if(is.na(N.temp[i,2]))N.temp[i,2]=Inf
+#     if(is.na(N.temp[i,3]))N.temp[i,3]=Inf
+# }
+# 
+# N.temp
+# 
+# ###
+# ### Format data matrix to fit into jags
+# ###
+# 
+# N.data.fit = matrix(NA,nr=n.cap+n.fawncap+n.mort,ncol=3)
+# 
+# indx = 1
+# for(i in 1:(n.cap+n.fawncap)){
+#     if(N.temp[i,4]==1){
+#         N.data.fit[indx,] = c(N.temp[i,1:2],1)
+#         indx=indx+1
+#     }
+#     if(N.temp[i,4]==0){
+#         N.data.fit[indx,] = c(N.temp[i,1:2],1)
+#         indx=indx+1
+#         N.data.fit[indx,] = c(N.temp[i,2:3],0)
+#         indx=indx+1
+#     }
+# }
+# 
+# N.data.fit
 
 ######################################################################################################################3
 ###
@@ -221,14 +233,11 @@ N.data.fit
 ######################################################################################################################3
 
 #removing fawns from the mortality
-
 mort.rm=c()
 for(l in 1:n.fawncap){
     mort.rm=c(mort.rm,which(d.mort$lowtag==d.fawncap$lowtag[l]))
 }
-
 d.mort.ad=d.mort[-mort.rm,]
-
 n.mort = dim(d.mort.ad)[1]
 
 #initialize matrix of captures/recaptures/morts
@@ -237,18 +246,18 @@ N.temp = matrix(NA,nr=n.cap,nc = 4)
 #initialize with all animals alive
 N.temp[,4] = 1
 
-
+#Filling N.temp with all times
 for(i in 1:n.cap){
-    N.temp[i,1] = floor(d.cap$dateCts[i])
+    N.temp[i,1] = d.cap$dateDis[i]
     for(j in 1:n.mort){
         if(d.cap$lowTag[i]==d.mort.ad$lowtag[j]){
-            N.temp[i,3] = floor(d.mort.ad$estMortDateCts[j])
-            N.temp[i,2] = floor(d.mort.ad$estMortDateCts[j])-1
+            N.temp[i,3] = d.mort.ad$estMortDateDis[j]
+            N.temp[i,2] = d.mort.ad$estMortDateDis[j]-1
             N.temp[i,4] = 0
         }
     }
 }
-N.temp
+# N.temp
 
 non.harvest.survival.end=week(ymd('2017-11-18'))
 harvest.start.week=week(ymd('2017-11-18'))+1
@@ -344,51 +353,47 @@ summary(out.const)
 ######################################################################################################################3
 
 #removing fawns from the mortality
-
 mort.rm=c()
 for(l in 1:n.fawncap){
     mort.rm=c(mort.rm,which(d.mort$lowtag==d.fawncap$lowtag[l]))
 }
 
 d.mort.ad=d.mort[-mort.rm,]
-
 n.mort = dim(d.mort.ad)[1]
 
 #initialize matrix of captures/recaptures/morts
 N.temp = matrix(NA,nr=n.cap,nc = 6)
 
-
-
 #initialize with all animals alive
 N.temp[,4] = 1
 
+#initialize with all CWD neg
+N.temp[,6] = 'neg'
+
+#Filling N.temp with all times
 for(i in 1:n.cap){
-    N.temp[i,1] = floor(d.cap$dateCts[i])
-    N.temp[i,4] = d.cap$bodyconditionvalue[i]
-    N.temp[i,5] = d.cap$
+    N.temp[i,1] = d.cap$dateDis[i]
+    N.temp[i,5] = d.cap$bodyconditionvalue[i]
     for(j in 1:n.mort){
         if(d.cap$lowTag[i]==d.mort.ad$lowtag[j]){
-            N.temp[i,3] = floor(d.mort.ad$estMortDateCts[j])
-            N.temp[i,2] = floor(d.mort.ad$estMortDateCts[j])-1
+            N.temp[i,3] = d.mort.ad$estMortDateDis[j]
+            N.temp[i,2] = d.mort.ad$estMortDateDis[j]-1
             N.temp[i,4] = 0
         }
     }
 }
-
-
-
-
+N.temp
 
 non.harvest.survival.end=week(ymd('2017-11-18'))
 harvest.start.week=week(ymd('2017-11-18'))+1
 harvest.start.week
 
-N.temp
+
+#Filling N.temp with max week of study, right censoring
 for(i in 1:(n.cap+n.fawncap)){
     if(is.na(N.temp[i,2]))N.temp[i,2]=non.harvest.survival.end
     if(is.na(N.temp[i,3]))N.temp[i,3]=non.harvest.survival.end
 }
-
 N.temp
 
 
