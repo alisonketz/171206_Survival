@@ -147,9 +147,9 @@ n.mort = dim(d.mort.ad)[1]
 
 
 #week cut-off for harvest 
-non.harvest.survival.end=week(ymd('2017-11-18'))-start.week
+non.harvest.survival.end=week(ymd('2017-09-16'))-start.week
 non.harvest.survival.end
-harvest.start.week=week(ymd('2017-11-18'))-start.week+1
+harvest.start.week=week(ymd('2017-09-16'))-start.week+1
 harvest.start.week
 
 ###
@@ -170,10 +170,11 @@ d.mort.ad$estMortDateDis = (week(d.mort.ad$estMortDate) - start.week + 1)
 d.mort.ad$collarFoundDis=(week(d.mort.ad$collarFound) - start.week + 1)
 
 
-#remove the mortalities that died during harvest
+#remove the mortalities that died from harvest
 d.mort.ad=d.mort.ad[-which(d.mort.ad$cause1=="Hunter harvest"),]
-d.mort.ad=d.mort.ad[-which(d.mort.ad$mORTAlertdateDis>non.harvest.survival.end),]
 
+d.mort.ad=d.mort.ad[-which(d.mort.ad$mORTAlertdateDis>non.harvest.survival.end),]
+which(d.mort.ad$mORTAlertdateDis>non.harvest.survival.end)
 n.mort=dim(d.mort.ad)[1]
 n.mort
 
@@ -216,27 +217,31 @@ for(i in 1:(n.cap)){
 }
 N.temp
 
-N.temp
 
-for(i in 1:(n.cap)){
-    if(N.temp[i,4]==0 & N.temp[i,2]==N.temp[i,3])N.temp[i,2]=N.temp[i,2]-1
-}
-N.temp
+#if mortality occurs during harvest season, set max r 
+
+
+# N.temp
+
+# for(i in 1:(n.cap)){
+#     if(N.temp[i,4]==0 & N.temp[i,2]==N.temp[i,3])N.temp[i,2]=N.temp[i,2]-1
+# }
+# N.temp
 
 n.temp=dim(N.temp)[1]
 n.temp
 
-
+n.mort
 #Censor animals that died within 1 week of capture
 
-rm.index=which(N.temp[,4]==0 & N.temp[,1]==N.temp[,2])
-length(rm.index)
-rm.index
-N.temp=N.temp[-rm.index,]
-
-n.temp=dim(N.temp)[1]
-n.temp
-n.mort=n.mort-length(rm.index)
+# rm.index=which(N.temp[,4]==0 & N.temp[,1]==N.temp[,2])
+# length(rm.index)
+# rm.index
+# N.temp=N.temp[-rm.index,]
+# 
+# n.temp=dim(N.temp)[1]
+# n.temp
+# n.mort=n.mort-length(rm.index)
 
 # rm.index2= N.temp[which(N.temp[,1]>N.temp[,2]),]
 # length(rm.index2)
@@ -254,14 +259,11 @@ n.mort=n.mort-length(rm.index)
 #note that these individuals were still alive before Gun Harvest, therefore, their censor value should be set to 1 (Alive) and the max week should be used
 
 
-
-
-
 ###
 ### Format data matrix to fit into jags
 ###
 
-N.data.fit = matrix(NA,nr=n.temp+n.mort-1,ncol=5)
+N.data.fit = matrix(NA,nr=n.temp+n.mort,ncol=5)
 
 indx = 1
 for(i in 1:n.temp){
@@ -278,21 +280,30 @@ for(i in 1:n.temp){
 }
 
 
-N.data.fit
 
-#ensure no indexes of 1
-min(N.data.fit[,1:2])
+#remove the rows where morts are withiin 2 weeks of capture
+
+mort.check=which(N.data.fit[,3]==0)-1
+rm.indx=c()
+for(i in mort.check){
+    if(N.data.fit[i,1]==N.data.fit[i,2])rm.indx=c(rm.indx,i)
+}
+rm.indx
+N.data.fit[sort(c(rm.indx,rm.indx+1)),]
+
+N.data.fit=N.data.fit[-rm.indx,]
+
+
+which(N.data.fit[which(N.data.fit[,3]==0)-1,1]==N.data.fit[which(N.data.fit[,3]==0)-1,2])
 
 #indexing records
 n.fit=dim(N.data.fit)[1]
+n.fit
 
-
-
-
-# N.data.fit[15,1]=N.data.fit[15,1]-1
-
-
-N.data.fit[which(N.data.fit[,1]==N.data.fit[,2])+1,]
+#ensure no indexes of 0(
+for(i in 1:n.fit){
+    if(N.data.fit[i,3]==0 & N.data.fit[i,1]==N.data.fit[i,2]) N.data.fit[i,1] = N.data.fit[i,1] -1
+}
 
 
 
@@ -446,7 +457,7 @@ pdf("Survival_v1.pdf")
 ggplot(data = out, aes(x = Weeks,y=Survival,group=CWD.status,color=CWD.status))+geom_line()+theme_bw()+
     geom_ribbon(aes(ymin=Lower,ymax=Upper,fill=CWD.status),alpha=.1,show.legend=NA,linetype=0)+
     scale_fill_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+scale_colour_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+
-    ggtitle("Non-harvest Survival")+xlab("Time(Weeks)")
+    ggtitle("Pre-harvest Survival")+xlab("Time(Weeks)")
 dev.off()
 
 #saveworking directory

@@ -166,16 +166,15 @@ max(d.mort.ad$collarFoundDis,na.rm=TRUE)
 
 
 #week cut-off for harvest 
-non.harvest.survival.end=week(ymd('2017-11-18'))-start.week
+non.harvest.survival.end=week(ymd('2017-09-16'))-start.week
 non.harvest.survival.end
-harvest.start.week=week(ymd('2017-11-18'))-start.week+1
+harvest.start.week=week(ymd('2017-09-16'))-start.week+1
 harvest.start.week
-time.end= week(max(d.mort.ad$collarFound,na.rm=T))-start.week+1
-time.end
-
+study.end= week(max(d.mort.ad$collarFound,na.rm=T))-start.week+1
+study.end
 
 #initialize matrix of captures/recaptures/morts
-N.temp = matrix(NA,nr=n.cap,nc = 7)
+N.temp = matrix(NA,nr=n.cap,nc = 8)
 
 #initialize with all animals alive
 N.temp[,4] = 1
@@ -183,110 +182,146 @@ N.temp[,4] = 1
 #initialize with all CWD neg
 N.temp[,5] = 0
 
-#initialize with sex=0
+#initialize with harvest mortality=0
 N.temp[,7] = 0
+#initialize with harvest mortality=0
+N.temp[,8] = 0
 
 #Filling N.temp with all times
 for(i in 1:n.cap){
     N.temp[i,1] = d.cap$dateDis[i]#e
     N.temp[i,5] = d.cap$cwdstatus[i]
     N.temp[i,6] = d.cap$bodyconditionvalue[i]
-    N.temp[i,7] = d.cap$sex[i]
+    N.temp[i,8] = as.numeric(d.cap$sex[i])-1
     for(j in 1:n.mort){
         if(d.cap$lowTag[i]==d.mort.ad$lowtag[j]){
             N.temp[i,2] = d.mort.ad$mORTAlertdateDis[j]#r
             N.temp[i,3] = d.mort.ad$estMortDateDis[j]#s
             N.temp[i,4] = 0
+            if(d.mort.ad$cause1[j]=="Hunter harvest")N.temp[i,7]=1
         }
         if(N.temp[i,4]==0){
             if(is.na(N.temp[i,2])){
                 N.temp[i,2]=d.mort.ad$estMortDateDis[j]
             }
-            if(is.na(N.temp[i,3])){N.temp[i,3]=time.end}#set to the max week, because that's the following week of last known alive
+            if(is.na(N.temp[i,3])){N.temp[i,3]=study.end}#set to the max week, because that's the following week of last known alive
             if(N.temp[i,2]>N.temp[i,3]){N.temp[i,2]=N.temp[i,3]}
         }
     }
 }
 N.temp
-n.temp=dim(N.temp)[1]
-#N.temp[N.temp[,4]==0,]
 
-for(i in 1:n.temp){
-    if(is.na(N.temp[i,2]))N.temp[i,2]=time.end
-    if(is.na(N.temp[i,3]))N.temp[i,3]=time.end
+
+for(i in 1:(n.cap)){
+    if(is.na(N.temp[i,2]))N.temp[i,2]=study.end
+    if(is.na(N.temp[i,3]))N.temp[i,3]=study.end
 }
 N.temp
 
 n.temp=dim(N.temp)[1]
 n.temp
 
+#set harvest coefficient
+
+# which(N.temp[,3]>non.harvest.survival.end)
+
+# N.temp[which(N.temp[,3]>non.harvest.survival.end),7]=1
+# which(N.temp[,3]>non.harvest.survival.end & N.temp[,4]==0)
+sum(N.temp[,7])
+
+head(N.temp)
+N.temp[6,1:3]=c(1,2,2)
 
 for(i in 1:n.temp){
-    if(N.temp[i,4]==0 & N.temp[i,2]==N.temp[i,3])N.temp[i,2]=N.temp[i,2]-1
+    if(N.temp[i,4]==0 & N.temp[i,2]==N.temp[i,3]){
+        N.temp[i,2]=N.temp[i,2]-1
+    }
 }
-N.temp
+head(N.temp)
 
-
-
-
-
-#Censor animals that died within 1 week of capture
-
-rm.index=which(N.temp[,4]==0 & N.temp[,1]==N.temp[,2])
-length(rm.index)
-rm.index
-N.temp=N.temp[-rm.index,]
-
-n.temp=dim(N.temp)[1]
-n.temp
-
-
-rm.index2= which(N.temp[,1]>N.temp[,2])
-length(rm.index2)
-rm.index2
-N.temp=N.temp[-rm.index2,]
-n.temp=dim(N.temp)[1]
-n.temp
-
-
-n.mort=n.mort-length(rm.index)-length(rm.index2)
-
-
-#set sex coefficient
-
-N.temp[,7]=N.temp[,7]-1
-
-
+N.temp[which(N.temp[,2]<N.temp[,1]),]
 
 ###
 ### Format data matrix to fit into jags
 ###
 
-N.data.fit = matrix(NA,nr=n.temp+n.mort-1,ncol=6)
+N.data.fit = matrix(NA,nr=n.temp+n.mort-1,ncol=7)
 
 indx = 1
 for(i in 1:n.temp){
     if(N.temp[i,4]==1){
-        N.data.fit[indx,] = c(N.temp[i,1:2],1,N.temp[i,5:7])
+        N.data.fit[indx,] = c(N.temp[i,1:2],1,N.temp[i,5:8])
         indx=indx+1
     }
     if(N.temp[i,4]==0){
-        N.data.fit[indx,] = c(N.temp[i,1:2],1,N.temp[i,5:7])
+        N.data.fit[indx,] = c(N.temp[i,1:2],1,N.temp[i,5:8])
         indx=indx+1
-        N.data.fit[indx,] = c(N.temp[i,2:3],0,N.temp[i,5:7])
+        N.data.fit[indx,] = c(N.temp[i,2:3],0,N.temp[i,5:8])
         indx=indx+1
     }
 }
 
 N.data.fit
 
-#ensure no indexes of 1
-min(N.data.fit[,1:2])
+#indexing records
+n.fit=dim(N.data.fit)[1]
 
-N.data.fit
+
+
+#remove the rows where morts are withiin 2 weeks of capture
+
+mort.check=which(N.data.fit[,3]==0)-1
+rm.indx=c()
+for(i in mort.check){
+    if(N.data.fit[i,1]>N.data.fit[i,2])rm.indx=c(rm.indx,i)
+}
+rm.indx
+
+
+N.data.fit[sort(c(rm.indx,rm.indx+1)),]
+
+N.data.fit=N.data.fit[-rm.indx,]
+
 
 #indexing records
 n.fit=dim(N.data.fit)[1]
+n.fit
+
+
+#ensure no indexes of 0(
+for(i in 1:n.fit){
+    if(N.data.fit[i,3]==0 & N.data.fit[i,1]==N.data.fit[i,2]) N.data.fit[i,1] = N.data.fit[i,1] -1
+}
+
+#indexing records
+n.fit=dim(N.data.fit)[1]
+n.fit
+
+
+#fix index 6
+head(N.data.fit)
+
+min(N.data.fit[,2])
+
+ch.indxx=which(N.data.fit[,2]==N.data.fit[,1])
+ch.indxx
+N.data.fit[ch.indxx,]
+N.data.fit=N.data.fit[-ch.indxx,]
+n.fit=dim(N.data.fit)[1]
+
+
+
+#setting harvest.season for derived parameters
+study.end
+n.weeks=study.end
+harvest.haz=c(rep(0,non.harvest.survival.end),rep(1,study.end-harvest.start.week+1))
+length(harvest.haz)
+
+
+
+which(d.cap$lowTag[43]==d.mort.ad$lowtag)
+d.mort.ad[22,]
+
 
 ###
 ### define Jags model 
@@ -339,7 +374,6 @@ summary(out.const)
 
 ######################################################################################################################3
 ###
-### Separating adults and fawns from the mortality data
 ### Adding covariates i.e. CWD status at capture and hunter harvest
 ###
 ######################################################################################################################3
@@ -352,20 +386,16 @@ summary(out.const)
 sink("model.cwd.R")
 cat("
     model{
-    
-    # Priors
-    for(j in 1:records){
-        llambda[j] <- beta0 + beta1*x1[j] + beta2*x2[j]
-    }
-    
     beta0 ~ dnorm(0, 1.0E-6) # intercept log hazard rate
     beta1 ~ dnorm(0, 1.0E-6) # cwd effect log hazard rate
-    beta2 ~ dnorm(0, 1.0E-6) # hunter harvest effect log hazard rate
+    beta2 ~ dnorm(0, 1.0E-6) # bow harvest effect log hazard rate
+    beta3 ~ dnorm(0, 1.0E-6) # gun harvest effect log hazard
+    beta4 ~ dnorm(0, 1.0E-6) # sex effect log hazard
 
     # Likelihood for the total hazard
     for (j in 1:records) {
         for (k in left[j]:(right[j]-1)) {
-            UCH[j,k] <- exp(llambda[j])
+             UCH[j,k] <- exp(beta0 + beta1*x1[j]+beta2*x4[k]+beta3*x5[k] +beta4*x2[j])
         }
         # total prob of surviving
         SLR[j] <- exp(-sum(UCH[j,left[j]:(right[j]-1)])) 
@@ -374,10 +404,10 @@ cat("
 
     #Derived parameters
     for (t in 1:n.weeks){
-        llambda.out[t,1]<-beta0 #Female CWD-
-        llambda.out[t,2]<-beta0+beta2 #male CWD -
-       llambda.out[t,3]<-beta0+beta1 #Female CWD+
-        llambda.out[t,4]<-beta0+beta1+beta2 #male CWD +
+        llambda.out[t,1]<-beta0 + beta2*x4[t] +beta3*x5[t] #Female CWD-
+        llambda.out[t,2]<-beta0 + beta2*x4[t] +beta3*x5[t] + beta4 #Male CWD -
+       llambda.out[t,3]<-beta0 + beta1 + beta2*x4[t] +beta3*x5[t] #Female CWD+
+        llambda.out[t,4]<-beta0+beta1+beta2*x4[t]+beta3*x5[t]+beta4 #Male CWD +
         for(j in 1:4){
             UCH0[t,j]<-exp(llambda.out[t,j])
             CH0[t,j]<-sum(UCH0[1:t,j])
@@ -389,13 +419,14 @@ cat("
 sink()
 
 #specify initial values
-inits<-list(list("beta0"=1,"beta1"=-1.5,"beta2"=1),list("beta0"=-.5,"beta1"=.25,"beta2"=2),list("beta0"=1,"beta1"=.5,"beta2"=.5))
+inits<-list(list("beta0"=1,"beta1"=-1.5,"beta2"=1,"beta3"=-.35),list("beta0"=-.5,"beta1"=.25,"beta2"=2,"beta3"=.5),list("beta0"=1,"beta1"=.5,"beta2"=.5,"beta3"=-1.5))
 
 #identify params to monitor
 parameters<-c("beta0","beta1","beta2","S0") 
 
 # Bundle data
-jags.data <- list(records=n.fit,left=N.data.fit[,1],right=N.data.fit[,2],censor=N.data.fit[,3],x1=N.data.fit[,4],x2=N.data.fit[,6],n.weeks=max(N.data.fit,na.rm=TRUE))
+
+jags.data <- list(records=n.fit,left=N.data.fit[,1],right=N.data.fit[,2],censor=N.data.fit[,3],x1=N.data.fit[,4],x2=N.data.fit[,6],x3=N.data.fit[,7],n.weeks=study.end,x4=harvest.haz)
 
 
 
@@ -444,11 +475,182 @@ ggplot(data =out,aes(x = Weeks,y=Survival,group=SexCWD,color=SexCWD))+geom_line(
 pdf("Survival_v4.pdf")
 ggplot(data =out,aes(x = Weeks,y=Survival,group=SexCWD,color=SexCWD))+geom_line()+theme_bw()+
     geom_ribbon(aes(ymin=Lower,ymax=Upper,fill=SexCWD),alpha=.1,show.legend=NA,linetype=0)+
-    scale_fill_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Female(-)","Male(-)","Female(+)","Male(+)"))+scale_colour_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Female(-)","Male(-)","Female(+)","Male(+)"))+
+    scale_fill_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Male(-)","Female(-)","Male(+)","Female(+)"))+scale_colour_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Male(-)","Female(-)","Male(+)","Female(+)"))+
+    ggtitle("Survival (Including Harvest)")+xlab("Time(Weeks)")
+dev.off()
+
+ 
+
+
+
+
+
+######################################################################################################################3
+###
+### Include harvested data, not in covariate
+### Adding covariates i.e. CWD status at capture and hunter harvest
+###
+######################################################################################################################3
+
+###
+### define Jags model 
+###
+
+sink("model.cwd.R")
+cat("
+    model{
+    
+    # Priors
+    for(j in 1:records){
+    llambda[j] <- beta0 + beta1*x1[j]
+    }
+    
+    beta0 ~ dnorm(0, 1.0E-6) # intercept log hazard rate
+    beta1 ~ dnorm(0, 1.0E-6) # cwd effect log hazard rate
+    
+    # Likelihood for the total hazard
+    for (j in 1:records) {
+    for (k in left[j]:(right[j]-1)) {
+    UCH[j,k] <- exp(llambda[j])
+    }
+    # total prob of surviving
+    SLR[j] <- exp(-sum(UCH[j,left[j]:(right[j]-1)])) 
+    censor[j] ~ dbern(SLR[j])      
+    }
+    
+    #Derived parameters
+    for (t in 1:n.weeks){
+    llambda.out[t,1]<-beta0
+    llambda.out[t,2]<-beta0+beta1
+    for(j in 1:2){
+    UCH0[t,j]<-exp(llambda.out[t,j])
+    CH0[t,j]<-sum(UCH0[1:t,j])
+    S0[t,j]<-exp(-CH0[t,j])
+    }
+    }
+    
+    }
+    ",fill = TRUE)
+sink()
+
+
+#specify initial values
+inits<-list(list("beta0"=1,"beta1"=-1.5),list("beta0"=-.5,"beta1"=.25),list("beta0"=1,"beta1"=.5))
+
+#identify params to monitor
+parameters<-c("beta0","beta1","S0") 
+
+# Bundle data
+jags.data <- list(records=n.fit,left=N.data.fit[,1],right=N.data.fit[,2],censor=N.data.fit[,3],x1=N.data.fit[,4],n.weeks=max(N.data.fit,na.rm=TRUE))
+
+
+
+# MCMC settings
+nt = 1
+ni = 1000
+nb = 10000
+nc = 3
+
+# call parallel version of jags using dclone
+cl=makeCluster(3)
+out.cwd=jags.parfit(cl, data=jags.data, params=parameters, model="model.cwd.R",inits=inits,n.chains=nc,n.thin=nt,n.iter=ni,n.burnin=nb)
+stopCluster(cl)
+
+
+gelman.diag(out.cwd,multivariate = F)
+
+n.weeks=max(N.data.fit,na.rm=TRUE)
+
+fit.sum=summary(out.cwd)[[1]]
+fit.quant=summary(out.cwd)[[2]]
+fit.sum
+fit.quant
+
+
+
+
+
+# The Colorblind palette with grey:
+cbPalette <- c( "#0072B2", "#D55E00", "#CC79A7","#999999", "#E69F00", "#56B4E9")
+
+
+
+
+
+
+###
+### Plot with only CWD Status
+###
+
+
+Weeks=rep(1:n.weeks,4)
+ # Sex=c(rep(0,n.weeks),rep(1,n.weeks),rep(0,n.weeks),rep(1,n.weeks))
+CWD.status=c(rep(0,n.weeks),rep(1,n.weeks))
+
+Survival=fit.sum[1:(2*n.weeks),1]
+Lower=fit.quant[1:(2*n.weeks),1]
+Upper=fit.quant[1:(2*n.weeks),5]
+
+out=data.frame(cbind(Weeks,Survival,Lower,Upper,CWD.status))
+out$CWD.status=as.factor(out$CWD.status)
+
+
+ggplot(data =out,aes(x = Weeks,y=Survival,group=CWD.status,color=CWD.status))+geom_line()+theme_bw()+
+    geom_ribbon(aes(ymin=Lower,ymax=Upper,fill=CWD.status),alpha=.1,show.legend=NA,linetype=0)+
+    scale_fill_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+scale_colour_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+
+    ggtitle("Survival (Including Harvest)")+xlab("Time(Weeks)")
+
+
+pdf("Survival_v4_b.pdf")
+ggplot(data =out,aes(x = Weeks,y=Survival,group=CWD.status,color=CWD.status))+geom_line()+theme_bw()+
+    geom_ribbon(aes(ymin=Lower,ymax=Upper,fill=CWD.status),alpha=.1,show.legend=NA,linetype=0)+
+    scale_fill_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+scale_colour_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+
     ggtitle("Survival (Including Harvest)")+xlab("Time(Weeks)")
 
 dev.off()
 
- 
+
 #saveworking directory
 save.image("survival_v4.Rdata")
+
+
+###
+### Calculate summary statistics 
+###
+
+#raw stats
+
+#(i.e., #alive/# collars deployed) for CWD+ and CWD-
+non.cwd=N.temp[N.temp[,5]!=1,]
+1-sum(non.cwd[,4]==0)/dim(non.cwd)[1]
+
+
+cwd.pos=N.temp[N.temp[,5]==1,]
+1-sum(cwd.pos[,4]==0)/dim(cwd.pos)[1]
+
+
+
+fit.sum
+cwd.id=d.cap$lowTag[d.cap$cwdstatus==1]
+
+mort.cwd.sub=matrix(NA,nr=length(cwd.id),nc=dim(d.mort.ad)[2])
+for(i in 1:length(cwd.id)){
+    for(j in 1:dim(d.mort.ad)[1]){
+        if(cwd.id[i]==d.mort.ad$lowtag[j]){
+            mort.cwd.sub[i,]=d.mort.ad[j,]
+        }
+        else{
+            mort.cwd.sub[i,]=rep(1,57)
+        } 
+    }
+}
+d.mort.ad$lowtag==
+
+d.cap$cwdstatus
+dim(d.cap)
+dim(d.mort.ad)
+
+names(d.mort.ad)
+d.mort.ad.hunt=d.mort.ad[d.mort.ad$cause1=="Hunter Harvest",]
+
+hist(d.mort.ad.hunt)

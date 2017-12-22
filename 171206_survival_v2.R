@@ -147,9 +147,9 @@ n.mort = dim(d.mort.ad)[1]
 
 
 #week cut-off for harvest 
-non.harvest.survival.end=week(ymd('2017-11-18'))-start.week
+non.harvest.survival.end=week(ymd('2017-09-16'))-start.week
 non.harvest.survival.end
-harvest.start.week=week(ymd('2017-11-18'))-start.week+1
+harvest.start.week=week(ymd('2017-09-16'))-start.week+1
 harvest.start.week
 
 ###
@@ -176,6 +176,10 @@ d.mort.ad=d.mort.ad[-which(d.mort.ad$mORTAlertdateDis>non.harvest.survival.end),
 
 n.mort=dim(d.mort.ad)[1]
 n.mort
+
+###
+### Making dataframe
+###
 
 #initialize matrix of captures/recaptures/morts
 N.temp = matrix(NA,nr=n.cap,nc = 6)
@@ -220,16 +224,25 @@ n.temp=dim(N.temp)[1]
 n.temp
 
 
-#Censor animals that died within 1 week of capture
-
-rm.index=which(N.temp[,4]==0 & N.temp[,1]==N.temp[,3])
-length(rm.index)
-rm.index
-N.temp=N.temp[-rm.index,]
+for(i in 1:(n.cap)){
+    if(is.na(N.temp[i,2]))N.temp[i,2]=non.harvest.survival.end
+    if(is.na(N.temp[i,3]))N.temp[i,3]=non.harvest.survival.end
+}
+N.temp
 
 n.temp=dim(N.temp)[1]
 n.temp
-n.mort=n.mort-length(rm.index)
+
+#Censor animals that died within 1 week of capture
+# 
+# rm.index=which(N.temp[,4]==0 & N.temp[,1]==N.temp[,3])
+# length(rm.index)
+# rm.index
+# N.temp=N.temp[-rm.index,]
+# 
+# n.temp=dim(N.temp)[1]
+# n.temp
+# n.mort=n.mort-length(rm.index)
 
 # rm.index2= N.temp[which(N.temp[,1]>N.temp[,2]),]
 # length(rm.index2)
@@ -241,26 +254,26 @@ n.mort=n.mort-length(rm.index)
 
 # n.temp=dim(N.temp)[1]
 # n.temp
-
-N.temp
-
-for(i in 1:n.temp){
-    if(N.temp[i,4]==0 & N.temp[i,2]==N.temp[i,3])N.temp[i,2]=N.temp[i,2]-1
-}
-N.temp
-
-
-#removing instances where morts occured within 2 week of capture
-N.temp=N.temp[-which(N.temp[,1]==N.temp[,2]),]
-
-n.temp=dim(N.temp)[1]
-n.mort=n.mort-3
+# 
+# N.temp
+# 
+# for(i in 1:n.temp){
+#     if(N.temp[i,4]==0 & N.temp[i,2]==N.temp[i,3])N.temp[i,2]=N.temp[i,2]-1
+# }
+# N.temp
+# 
+# 
+# #removing instances where morts occured within 2 week of capture
+# N.temp=N.temp[-which(N.temp[,1]==N.temp[,2]),]
+# 
+# n.temp=dim(N.temp)[1]
+# n.mort=n.mort-3
 
 ###
 ### Format data matrix to fit into jags
 ###
 
-N.data.fit = matrix(NA,nr=n.temp+n.mort-1,ncol=5)
+N.data.fit = matrix(NA,nr=n.temp+n.mort,ncol=5)
 
 indx = 1
 for(i in 1:n.temp){
@@ -279,22 +292,37 @@ for(i in 1:n.temp){
 
 N.data.fit
 
-#ensure no indexes of 1
-min(N.data.fit[,1:2])
+
+#remove the rows where morts are withiin 2 weeks of capture
+
+mort.check=which(N.data.fit[,3]==0)-1
+rm.indx=c()
+for(i in mort.check){
+    if(N.data.fit[i,1]==N.data.fit[i,2])rm.indx=c(rm.indx,i)
+}
+rm.indx
+N.data.fit[sort(c(rm.indx,rm.indx+1)),]
+
+N.data.fit=N.data.fit[-rm.indx,]
+
 
 #indexing records
 n.fit=dim(N.data.fit)[1]
-
 n.fit
 
 
-# N.data.fit[15,1]=N.data.fit[15,1]-1
+#ensure no indexes of 0(
+for(i in 1:n.fit){
+    if(N.data.fit[i,3]==0 & N.data.fit[i,1]==N.data.fit[i,2]) N.data.fit[i,1] = N.data.fit[i,1] -1
+}
 
+#indexing records
+n.fit=dim(N.data.fit)[1]
+n.fit
 
-N.data.fit[which(N.data.fit[,1]==N.data.fit[,2]),]
-
-
-
+#fix index 6
+head(N.data.fit)
+N.data.fit[6,1:2]=c(1,2)
 ###
 ### define Jags model 
 ###
