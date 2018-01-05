@@ -1,0 +1,265 @@
+\documentclass[12pt]{article}
+
+% make wider margins
+\usepackage[margin=1in]{geometry}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Formatting
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+% define font
+\usepackage{times}
+
+% math symbols
+\usepackage{amsmath, amsfonts, amssymb, bbm, bm}
+
+%remove extra space for align environments
+\setlength{\abovedisplayskip}{-15pt}
+\setlength{\belowdisplayskip}{0pt}
+% \newcommand{\zerodisplayskips}{
+%   \setlength{\abovedisplayskip}{3pt}
+%   \setlength{\belowdisplayskip}{8pt}
+%   \setlength{\abovedisplayshortskip}{10pt}
+%   \setlength{\belowdisplayshortskip}{10pt}}
+% \appto{\normalsize}{\zerodisplayskips}
+
+% extra graphics and figures formatting and options
+\usepackage{graphicx,caption,subcaption,rotating,float,rotating,calc,fancyhdr,url,tablefootnote, titlesec,titletoc,arydshln}
+
+% bullet lists, etc. with custom indentation
+\usepackage{enumerate}
+
+% easy in-text citations and colored urls
+% \usepackage[colorlinks = true,
+%             linkcolor = blue,
+%             urlcolor  = blue,
+%             citecolor = blue,
+%             anchorcolor = blue]{hyperref}
+
+% tell latex to not hyphenate words!!!
+%\usepackage[none]{hyphenat}
+
+% let equations spill over multiple pages
+\allowdisplaybreaks
+
+%line and sentence spacing and page formatting
+\usepackage[tablesfirst,notablist]{endfloat}
+\usepackage{setspace,lineno,breakcites}
+\usepackage[title]{appendix}
+\doublespace
+
+
+%captions formatting
+%\usepackage[small,it]{caption}
+%\addtolength{\belowcaptionskip}{-3mm}
+%\addtolength{\abovecaptionskip}{-3mm}
+%\addtolength{\intextsep}{-3mm}
+
+%bibliography
+\usepackage[authoryear]{natbib}
+\bibliographystyle{besjournals}
+
+%Miscellaneous formatting for paper
+\newcommand*\mystrut[1]{\vrule width0pt height0pt depth#1\relax}
+\providecommand{\keywords}[1]{\textbf{Key Words:} #1}
+\renewcommand{\refname}{Literature Cited} 
+
+%Define math operators myself
+\newcommand\Tau{\mathcal{T}}
+
+%Adding multiple authors with multiple affiliations
+\usepackage{authblk}
+
+%Making key words heading
+\providecommand{\keywords}[1]{\textbf{Key Words:} #1}
+
+%Remove space before section headers
+\titlespacing{\section}{0pt}{0pt}{0pt}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Title, Authorship
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Survival Analaysis Report}
+
+\author[1]{Alison C. Ketz \thanks{Email address: \texttt{alison.ketz@colostate.edu}}}
+\affil{Department of Forest and Wildlife Ecology, University of Wisconsin, Madison 53706}
+\setcounter{Maxaffil}{0}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Begin Document
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+% print document title
+\maketitle
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Load libraries and set up cache
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+<<setup, cache=FALSE, include=FALSE>>=
+# set some default options for all document chunks
+opts_chunk$set(cache=FALSE, fig.align='center', tidy=TRUE)
+
+library(xtable)
+#library(dplyr)
+library(devtools)
+
+Sys.setenv(TEXINPUTS=getwd(),
+           BIBINPUTS=getwd(),
+           BSTINPUTS=getwd())
+
+@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Title page
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+\maketitle
+\date
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Background and Methods
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction and Methods}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Results
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Results}
+
+  <<load_hazard_results, echo=FALSE, results='asis'>>=
+    
+      load("~/Documents/Survival/171206_Survival/survival_v7.Rdata")
+      fit.sum.v7 = fit.sum
+      fit.quant.v7 = fit.quant
+      survival_all_sum_v7 = survival_all_sum
+      hazard_output_v7 = output
+
+      print.xtable(xtable(hazard_output_v7,caption = 'Coefficients of the hazard rate analysis where the baseline hazard shows the hazard for chronic wasting disease positive adult individuals not exposed to harvest, with additive hazard effects in the following three rows. The first column denotes the mean of the posterior distribution with the standard deviation (SD), and equal-tailed Bayesian credible intervals in the right two columns.', 
+                    align = c('c','c','c','c','c'),label="tab:hazard_v7",digits=c(0,2,2,2,2)),
+                    sanitize.text.function = function(x) {x},
+                    hline.after=c(0,4),
+                    include.rownames=TRUE,
+                    rotate.colnames = FALSE,
+                    caption.placement = "top"
+)  
+
+@
+
+
+
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[width=6 in]{figures/Survival_v7}
+\caption{The cumulative weekly probability of surviving from the beginning of the study through the end of the first year for chronic wasting disease positive white-tailed deer (orange line) and negative (blue line). Equal-tailed 95 \% Bayesian credible intervals for positive (orange shaded region) and negative (blue shaded region) deer. The bow hunt harvest season begins at the light grey dashed line and continues to the end of the study. The light grey shaded regions with darker grey dashed lines denote the gun harvest seasons.}\label{fig:survival_cwd}
+\end{center}
+\end{figure}
+
+
+  <<survival_v7_results, echo=FALSE, results='asis'>>=
+
+print.xtable(xtable(survival_all_sum,caption = 'The summary statistics for the posterior distributions of the cumulative probability of survival to the end of several harvest (and non harvest) seasons. The pre-harvest survival period spans from the beginning of the study through the Septmeber 15. While the archery and bow season continues throughout the study after the middle of September, the probability of survival due to bow and archery harvest alone are reported in the rows denoted bow hunt. The gun harvest survival probabilities include exposure to bow hunting, however only gun attributed mortalities occured during those seasons. The right two columns denote the 95\% Bayesian credible intervals.', 
+                    align = c('c','c','c','c','c','c','c'),label="tab:survival_v7",digits=c(0,0,2,2,2,2,2)),
+             sanitize.text.function = function(x) {x},
+             hline.after=c(-1,-1,0,8,8),
+             add.to.row = list(pos=list(c(2,4,6)), command="\\hdashline \n"),
+             include.rownames=FALSE,
+             rotate.colnames = FALSE,
+             caption.placement = "top")  
+
+@
+
+
+
+
+  <<sex_hazard_results, echo=FALSE, results='asis'>>=
+    
+      load("~/Documents/Survival/171206_Survival/survival_v8.Rdata")
+      fit.sum.v8 = fit.sum
+      fit.quant.v8 = fit.quant
+      survival_all_sum_v8 = survival_all_sum
+      hazard_output_v8 = output
+
+      print.xtable(xtable(hazard_output_v8,caption = 'Coefficients of the hazard rate analysis where the baseline hazard shows the hazard for chronic wasting disease positive adult females not exposed to harvest, with additive hazard effects in the following rows. The first column denotes the mean of the posterior distribution with the standard deviation (SD), and equal-tailed Bayesian credible intervals in the right two columns.', 
+                    align = c('c','c','c','c','c'),label="tab:hazard_v8",digits=c(0,2,2,2,2)),
+                    sanitize.text.function = function(x) {x},
+                    hline.after=c(0,5),
+                    include.rownames=TRUE,
+                    rotate.colnames = FALSE,
+                    caption.placement = "top"
+)  
+
+@
+
+
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[width=6 in]{figure/Survival_sex_v8}
+\caption{The cumulative weekly probability of surviving from the beginning of the study through the end of the first year for chronic wasting disease negative white-tailed deer, for adult females (blue line) and adult males (orange line). The cumulative weekly survival probability for chronic wasting disease positive deer are lower than for negative deer, for both adult females (pink line) and adult males (solid grey line). Equal-tailed 95 \% Bayesian credible intervals are shown in the corresponding color shaded regions. The bow hunt harvest season begins at the light grey dashed line and continues to the end of the study. The light grey shaded regions with darker grey dashed lines denote the gun harvest seasons.}\label{fig:survival_sex_cwd}
+\end{center}
+\end{figure}
+
+
+  <<survival_v8_results, echo=FALSE, results='asis'>>=
+
+print.xtable(xtable(survival_all_sum_v8,caption = 'The summary statistics for the posterior distributions of the cumulative probability of survival to the end of several harvest (and non harvest) seasons. The pre-harvest survival period spans from the beginning of the study through the Septmeber 15. While the archery and bow season continues throughout the study after the middle of September, the probability of survival due to bow and archery harvest alone are reported in the rows denoted bow hunt. The gun harvest survival probabilities include exposure to bow hunting, however only gun attributed mortalities occured during those seasons. The right two columns denote the 95\% Bayesian credible intervals.', 
+             align = c('c','c','c','c','c','c','c','c'),label="tab:survival_v8",digits=c(0,0,2,2,2,2,2,2)),
+             sanitize.text.function = function(x) {x},
+             hline.after=c(-1,-1,0,4,8,12,16,16),
+             add.to.row = list(pos=list(c(2,6,10,14)), command="\\hdashline \n"),
+             include.rownames=FALSE,
+             rotate.colnames = FALSE,
+             caption.placement = "top")  
+@
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Discussion
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% References
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliography{survival_bib}
+% \printbibliography
+
+
+\end{document}
+
+
+
+
+

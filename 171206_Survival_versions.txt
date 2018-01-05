@@ -1,0 +1,15 @@
+Versions:
+
+Survival analysis 12/06/2017
+
+Versions used different values for the e/r/s values in the model.
+
+Final versions were 
+
+v5: broken down by cwd status only
+v6: broken down by cwd status and sex
+
+Including sensitivity of the test into the analysis using a zero-inflated binomial model for the CWD status in the hazard.
+
+v7: cwd status only
+v8: broken down by cwd status and sex
