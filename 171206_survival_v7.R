@@ -580,21 +580,23 @@ out$CWD.status=as.factor(CWD.status)
 
 
 pdf("Survival_v7.pdf",width=8,height=6)
- ggplot(data = out, aes(x = Weeks,y=Survival,group=CWD.status,color=CWD.status))+
-     annotate('rect',xmax=gun.holiday.end.week, xmin=gun.holiday.start.week, ymax=Inf, ymin=-Inf, linetype=2,alpha=.5,fill="grey90")+
-     annotate('rect',xmax=gun.end.week, xmin=gun.start.week-1, ymax=Inf, ymin=-Inf, linetype=2,alpha=.5,fill="grey90")+
+ggplot(data = out, aes(x = Weeks,y=Survival,group=CWD.status,color=CWD.status))+
+    annotate('rect',xmax=gun.holiday.end.week, xmin=gun.holiday.start.week, ymax=Inf, ymin=-Inf, linetype=2,alpha=.5,fill="grey90")+
+    annotate('rect',xmax=gun.end.week, xmin=gun.start.week-1, ymax=Inf, ymin=-Inf, linetype=2,alpha=.5,fill="grey90")+
     geom_line()+theme_bw()+
     geom_ribbon(aes(ymin=Lower,ymax=Upper,fill=CWD.status),alpha=.1,show.legend=NA,linetype=0)+
     scale_fill_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+scale_colour_manual(values=cbPalette,name="CWD Status",labels=c("Negative","Positive"))+
-    ggtitle("Survival")+xlab("Time(Weeks)")+ylab("Survival Probability")+
+    ggtitle("Survival")+xlab("Time")+ylab("Survival Probability")+
     geom_vline(aes(xintercept=bow.start.week-1),linetype=2,color="grey70")+
     geom_vline(aes(xintercept=gun.start.week-1),linetype=2,color="grey50")+
     geom_vline(aes(xintercept=gun.end.week),linetype=2,color="grey50")+
     geom_vline(aes(xintercept=gun.holiday.start.week),linetype=2,color="grey50")+
     geom_vline(aes(xintercept=gun.holiday.end.week),linetype=2,color="grey50")+
     geom_text(x=36.85,y=1,label="Bow",color="grey70")+
-    geom_text(x=45.5,y=1,label="Gun",color="grey50")
+    geom_text(x=45.5,y=1,label="Gun",color="grey50")+
+    scale_x_discrete(limit = c(1,12,24,35,44,52),labels = c("Jan","March","June","Sep 16","Nov 18","Jan 7"))
 dev.off()
+
 
 
 ###
@@ -841,6 +843,33 @@ print.xtable(xtable(survival_all_sum,caption = 'survival probability nlahshfls',
              include.rownames=FALSE,
              rotate.colnames = FALSE,
              caption.placement = "top")  
+
+###
+### Prevalence posterior plot
+###
+
+out.psi.indx=dim(fit.sum)[1]
+fit.df=data.frame(rbind(out.cwd[[1]],out.cwd[[2]],out.cwd[[3]])[,out.psi.indx])
+
+plot(density(fit.df$Psi))
+names(fit.df)="Psi"
+
+cols=c("grey50","darkred")
+
+pdf("Prevalence.pdf")
+ggplot(data=fit.df,aes(x=Psi))+geom_density(size=1)+
+    geom_vline(aes(xintercept=fit.sum[out.psi.indx,1],color=cols[2]),linetype=2)+
+    geom_vline(aes(xintercept=fit.quant[out.psi.indx,1],color=cols[1]),linetype=2)+
+    geom_vline(aes(xintercept=fit.quant[out.psi.indx,5],color=cols[1]),linetype=2)+
+    scale_color_manual(values=cols,name="Posterior Statistics",labels=c("Mean = .15","Credible Interval = (.10,.21)"))+
+    ggtitle("Prevalence")+xlab(expression(psi))+ylab("Density")+
+    theme_bw()
+dev.off()
+
+prevalence.out=c(fit.sum[out.psi.indx,1],fit.quant[out.psi.indx,1],fit.quant[out.psi.indx,5])
+
+
+
 
 
 #saveworking directory

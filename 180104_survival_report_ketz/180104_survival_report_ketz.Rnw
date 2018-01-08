@@ -46,10 +46,9 @@
 \allowdisplaybreaks
 
 %line and sentence spacing and page formatting
-\usepackage[tablesfirst,notablist]{endfloat}
+% \usepackage[tablesfirst,notablist]{endfloat}
 \usepackage{setspace,lineno,breakcites}
 \usepackage[title]{appendix}
-\doublespace
 
 
 %captions formatting
@@ -89,9 +88,10 @@
 
 \title{Survival Analaysis Report}
 
-\author[1]{Alison C. Ketz \thanks{Email address: \texttt{alison.ketz@colostate.edu}}}
-\affil{Department of Forest and Wildlife Ecology, University of Wisconsin, Madison 53706}
-\setcounter{Maxaffil}{0}
+\author[1]{Alison C. Ketz}
+\affil[1]{Department of Forest and Wildlife Ecology, University of Wisconsin, Madison, aketz@wisc.edu}
+\author[2]{Dan P. Walsh}
+\affil[2]{National Wildlife-Health Center, U.S. Geological Survey, Madison, WI}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
@@ -103,6 +103,7 @@
 % print document title
 \maketitle
 
+\doublespace
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
@@ -142,6 +143,19 @@ Sys.setenv(TEXINPUTS=getwd(),
 
 \section{Introduction and Methods}
 
+The purpose of this document is to outline the results of the preliminary survival analysis for the WIDNR southwestern deer study from the first year of data available. This analysis uses data from captured and collared adult individuals during the first few months of 2017 to estimate adult survival until the first week of January 2018. It is quite early in this study for such an analysis, so we suggest extreme caution with interpretation of all results.
+
+Survival was estimated with a conditional continuous time to event model, also called a known fate hazard model \citep{kalbfleisch_statistical_2002}. The basic formulation of the likelihood can be found in \citet{walsh_using_2017} and allows for left truncation and interval-censored data. Survival is modeled on a weekly time scale, because it is computationally faster. Future analysis could use a finer time resolution (daily) if deemed necessary. Individuals suriviving to the end of the study period were right truncated at 52 weeks. Capture-induced mortalities were also right censored. A peice-wise cumulative discrete hazard model was used to approximate the unit cumulative hazard model, with a complementary log-log link function. Two models were fit using Bayesian methods and implemented in JAGS \citep{plummer_jags:_2004}, with standard diagnostics indicating no lack of fit. The first model included a discrete covariate for chronic wasting disease (CWD) status (positive or negative at capture or after mortality when available) in the hazard rate function, and a second model included covariates for both disease status and sex of the collared individual. No other covariates were considered at this time, but can be included in future analyses. 
+
+The live RAMALT test for CWD used in this study has been shown to have low sensitivity and high specificity with additional heterogeneities arising from disease stage and the PRNP genotype \citep{thomsen_diagnostic_2012}. In de-populated captive cervid farms in Canada and the US, \citet{thomsen_diagnostic_2012} calculated a pooled sensitivity of the RAMALT test of 68\% with 95\% credible limits of 49 and 82. We incorporated this test sensitivity for the individuals who tested negative for CWD at capture using a zero-inflated bernoulli model. Observed CWD status at capture ($x_1$) is modeled with a Bernoulli distribution that depends on the true disease status at capture and the probability of detecting the disease given that it is actually present, also known as the sensitivity ($p$). The true disease state ($\bm{z}$) was also modeled with a Bernoulli disribution depending on the prevalence ($\psi$) of the disease.
+\begin{align}
+    x_{1,j} & \sim \text{ Bernoulli }(p *z_j)\\
+    z_j & \sim \text{ Bernoulli }(\psi)\\
+    p & \sim \text{ beta }(92.5,44.5)\\
+    \psi & \sim \text{ uniform }(0,1),
+\end{align}
+
+\noindent for $j$ in $1,...,J$ records. A flat uniform (0,1) prior distribution was specified for prevalence ($\psi$). The parameters in the informed prior beta distribution of sensitivity ($p$) were moment matched \citep{hobbs_bayesian_2015} from the pooled estimate of sensitivity from \citet{thomsen_diagnostic_2012}. Flat normal prior distributions were used for the coefficients in the hazard rate model.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -152,6 +166,8 @@ Sys.setenv(TEXINPUTS=getwd(),
 
 \section{Results}
 
+Posterior distributions of the coefficients in the hazard rate models were calculated for both models. The baseline intercept for the analysis represents the hazard for CWD negative individuals for the first model, and CWD negative females for the second model. Other states were represented with the additive coefficient terms in the hazard rate model.
+
   <<load_hazard_results, echo=FALSE, results='asis'>>=
     
       load("~/Documents/Survival/171206_Survival/survival_v7.Rdata")
@@ -160,100 +176,127 @@ Sys.setenv(TEXINPUTS=getwd(),
       survival_all_sum_v7 = survival_all_sum
       hazard_output_v7 = output
 
-      print.xtable(xtable(hazard_output_v7,caption = 'Coefficients of the hazard rate analysis where the baseline hazard shows the hazard for chronic wasting disease positive adult individuals not exposed to harvest, with additive hazard effects in the following three rows. The first column denotes the mean of the posterior distribution with the standard deviation (SD), and equal-tailed Bayesian credible intervals in the right two columns.', 
-                    align = c('c','c','c','c','c'),label="tab:hazard_v7",digits=c(0,2,2,2,2)),
+      hazard_output_v7=cbind(rownames(hazard_output_v7),hazard_output_v7)
+      hazard_output_v7=data.frame(hazard_output_v7)
+      names(hazard_output_v7)=c( "Coefficient","Mean","SD",".025",".975")
+      
+      print.xtable(xtable(hazard_output_v7,caption = 'Coefficients of the hazard rate analysis where the baseline hazard shows the hazard for chronic wasting disease negative adult individuals not exposed to harvest, with additive hazard effects in the following three rows. The first column denotes the mean of the posterior distribution with the standard deviation (SD), and equal-tailed Bayesian credible intervals in the right two columns.',
+                    align = c('l','c','c','c','c','c'),label="tab:hazard_v7",digits=c(0,0,2,2,2,2)),
                     sanitize.text.function = function(x) {x},
                     hline.after=c(0,4),
-                    include.rownames=TRUE,
+                    include.rownames=FALSE,
                     rotate.colnames = FALSE,
-                    caption.placement = "top"
-)  
+                    caption.placement = "top",
+                    table.placement="H"
+                    )
 
 @
 
 
 
-\begin{figure}[ht]
-\begin{center}
-\includegraphics[width=6 in]{figures/Survival_v7}
-\caption{The cumulative weekly probability of surviving from the beginning of the study through the end of the first year for chronic wasting disease positive white-tailed deer (orange line) and negative (blue line). Equal-tailed 95 \% Bayesian credible intervals for positive (orange shaded region) and negative (blue shaded region) deer. The bow hunt harvest season begins at the light grey dashed line and continues to the end of the study. The light grey shaded regions with darker grey dashed lines denote the gun harvest seasons.}\label{fig:survival_cwd}
-\end{center}
-\end{figure}
+   <<sex_hazard_results, echo=FALSE, results='asis'>>=
+
+       load("~/Documents/Survival/171206_Survival/survival_v8.Rdata")
+       fit.sum.v8 = fit.sum
+       fit.quant.v8 = fit.quant
+       survival_all_sum_v8 = survival_all_sum
+       output=cbind(rownames(output),output)
+       output=data.frame(output)
+       names(output)=c("Coefficient","Mean","SD",".025",".975")
+       hazard_output_v8 = output
+       prevalence_out=prevalence.out
+
+       print.xtable(xtable(hazard_output_v8,caption = 'Coefficients of the hazard rate analysis where the baseline hazard shows the hazard for chronic wasting disease positive adult females not exposed to harvest, with additive hazard effects in the following rows. The first column denotes the mean of the posterior distribution with the standard deviation (SD), and equal-tailed Bayesian credible intervals in the right two columns.',
+                     align = c('c','c','c','c','c','c'),label="tab:hazard_v8",digits=c(0,0,2,2,2,2)),
+                     sanitize.text.function = function(x) {x},
+                     hline.after=c(0,5),
+                     include.rownames=FALSE,
+                     rotate.colnames = FALSE,
+                     caption.placement = "top",
+                     table.placement="H")
+
+ @
+
+
+The intercept term for both models was quite low on the log scale, suggesting relatively low mortality. This is consistent with other white-tailed deer populations and for ungulates in general \citep{gaillard_population_1998}. Chronic wasting disease substantially increased the hazard in both models (Tables 1 and 2). 
+
+Cumulative survival probabilities across all weeks of the study were derived using the posterior values of the hazard rate coefficients. For the first model, including only CWD status, the probability of surviving to the end of the study given exposure to both archery and gun harvest seasons was quite different for the CWD positive individuals than for CWD negative individuals.
+
+The pre-harvest survival period spans from the beginning of the study in January through September 15. The archery and bow season begins September 16 and is ongoing through the rest of the study. The estimated survival probability of archery and bow hunter harvest for the initial bow/archery hunting season were reported in the table as ``Post Bow/Archery", even though this type of harvest could occur throughout the remaining weeks of the study. This cumulative probability was included because all mortalities arising from archery and bow ocurred before the first gun hunting season began. 
+
+Note that none of these survival probabilities are conditional on surviving harvest given that an individual survives to the beginning of each harvest season. The survival probabilities in Tables 3 and 4 and Figures 1 and 2 are cumulative from the origin of the study until the end of the period they denote. For example, the reported survival probability of a CWD negative adult female in Table 4 under the row denoted "Post Gun 1" is not the probability of surviving gun harvest, it is the probability of surviving since the origin of the study including exposure to archery and bow hunting, as well as gun hunting during the initial gun season. The cumulative nature of these survival probabilities are more easily seen in the Figures 1 and 2. The tables are meant to provide a numerical reference, although viewing the tables alone may be confusing. 
+
+\vspace{1 cm}
 
 
   <<survival_v7_results, echo=FALSE, results='asis'>>=
 
-print.xtable(xtable(survival_all_sum,caption = 'The summary statistics for the posterior distributions of the cumulative probability of survival to the end of several harvest (and non harvest) seasons. The pre-harvest survival period spans from the beginning of the study through the Septmeber 15. While the archery and bow season continues throughout the study after the middle of September, the probability of survival due to bow and archery harvest alone are reported in the rows denoted bow hunt. The gun harvest survival probabilities include exposure to bow hunting, however only gun attributed mortalities occured during those seasons. The right two columns denote the 95\% Bayesian credible intervals.', 
-                    align = c('c','c','c','c','c','c','c'),label="tab:survival_v7",digits=c(0,0,2,2,2,2,2)),
+print.xtable(xtable(survival_all_sum_v7,caption = 'The summary statistics for the posterior distributions of the cumulative probability of survival to the end of several harvest (and non harvest) seasons. The cumulative survival probabilites for archery/bow harvest season are only for the season prior to gun harvest dates. The gun harvest survival probabilities include exposure to bow hunting, however, only gun attributed mortalities occured during those seasons. The right two columns denote the 95\\% Bayesian credible intervals.',
+                    align = c('c','c','c','c','c','c','c'),label="tab:survival_v7",
+                    digits=c(0,0,2,2,2,2,2)),
              sanitize.text.function = function(x) {x},
-             hline.after=c(-1,-1,0,8,8),
+             hline.after=c(0,0,8,8),
              add.to.row = list(pos=list(c(2,4,6)), command="\\hdashline \n"),
              include.rownames=FALSE,
              rotate.colnames = FALSE,
-             caption.placement = "top")  
+             caption.placement = "top",
+             table.placement="H")
 
 @
 
 
 
 
-  <<sex_hazard_results, echo=FALSE, results='asis'>>=
-    
-      load("~/Documents/Survival/171206_Survival/survival_v8.Rdata")
-      fit.sum.v8 = fit.sum
-      fit.quant.v8 = fit.quant
-      survival_all_sum_v8 = survival_all_sum
-      hazard_output_v8 = output
-
-      print.xtable(xtable(hazard_output_v8,caption = 'Coefficients of the hazard rate analysis where the baseline hazard shows the hazard for chronic wasting disease positive adult females not exposed to harvest, with additive hazard effects in the following rows. The first column denotes the mean of the posterior distribution with the standard deviation (SD), and equal-tailed Bayesian credible intervals in the right two columns.', 
-                    align = c('c','c','c','c','c'),label="tab:hazard_v8",digits=c(0,2,2,2,2)),
-                    sanitize.text.function = function(x) {x},
-                    hline.after=c(0,5),
-                    include.rownames=TRUE,
-                    rotate.colnames = FALSE,
-                    caption.placement = "top"
-)  
-
-@
-
-
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{center}
-\includegraphics[width=6 in]{figure/Survival_sex_v8}
-\caption{The cumulative weekly probability of surviving from the beginning of the study through the end of the first year for chronic wasting disease negative white-tailed deer, for adult females (blue line) and adult males (orange line). The cumulative weekly survival probability for chronic wasting disease positive deer are lower than for negative deer, for both adult females (pink line) and adult males (solid grey line). Equal-tailed 95 \% Bayesian credible intervals are shown in the corresponding color shaded regions. The bow hunt harvest season begins at the light grey dashed line and continues to the end of the study. The light grey shaded regions with darker grey dashed lines denote the gun harvest seasons.}\label{fig:survival_sex_cwd}
+\includegraphics[width=6 in]{figures/Survival_v7}
+\caption{The cumulative weekly probability of surviving from the beginning of the study through the end of the first year for chronic wasting disease negative white-tailed deer, for adult females (blue line) and adult males (orange line). The cumulative weekly survival probability for chronic wasting disease positive deer are lower than for negative deer, for both adult females (pink line) and adult males (solid grey line). Equal-tailed 95\% Bayesian credible intervals are shown in the corresponding color shaded regions. The bow hunt harvest season begins at the light grey dashed line and continues to the end of the study. The light grey shaded regions with darker grey dashed lines denote the gun harvest seasons.}\label{fig:survival_v7}
+\end{center}
+\end{figure}
+
+
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=6 in]{figures/Survival_v8_sex}
+\caption{The cumulative weekly probability of surviving from the beginning of the study through the end of the first year for chronic wasting disease negative white-tailed deer, for adult females (blue line) and adult males (orange line). The cumulative weekly survival probability for chronic wasting disease positive deer are lower than for negative deer, for both adult females (pink line) and adult males (solid grey line). Equal-tailed 95 \% Bayesian credible intervals are shown in the corresponding color shaded regions. The bow hunt harvest season begins at the light grey dotted line and continues to the end of the study. The light grey shaded regions with darker grey dashed lines denote the gun harvest seasons.}\label{fig:survival_v8}
 \end{center}
 \end{figure}
 
 
   <<survival_v8_results, echo=FALSE, results='asis'>>=
 
-print.xtable(xtable(survival_all_sum_v8,caption = 'The summary statistics for the posterior distributions of the cumulative probability of survival to the end of several harvest (and non harvest) seasons. The pre-harvest survival period spans from the beginning of the study through the Septmeber 15. While the archery and bow season continues throughout the study after the middle of September, the probability of survival due to bow and archery harvest alone are reported in the rows denoted bow hunt. The gun harvest survival probabilities include exposure to bow hunting, however only gun attributed mortalities occured during those seasons. The right two columns denote the 95\% Bayesian credible intervals.', 
+print.xtable(xtable(survival_all_sum_v8,caption = 'The summary statistics for the posterior distributions of the cumulative probability of survival to the end of several harvest (and non harvest) seasons. The pre-harvest survival period spans from the beginning of the study through the Septmeber 15. While the archery and bow season continues throughout the study after the middle of September, the probability of survival due to bow and archery harvest alone are reported in the rows denoted bow hunt. The gun harvest survival probabilities include exposure to bow hunting, however only gun attributed mortalities occured during those seasons. The right two columns denote the 95\\% Bayesian credible intervals.',
              align = c('c','c','c','c','c','c','c','c'),label="tab:survival_v8",digits=c(0,0,2,2,2,2,2,2)),
              sanitize.text.function = function(x) {x},
-             hline.after=c(-1,-1,0,4,8,12,16,16),
+             hline.after=c(0,0,4,8,12,16,16),
              add.to.row = list(pos=list(c(2,6,10,14)), command="\\hdashline \n"),
              include.rownames=FALSE,
              rotate.colnames = FALSE,
-             caption.placement = "top")  
-@
+              caption.placement = "top",
+             table.placement="H")
+ @
 
+As expected, survival decreases throughout the study, and there were large differences between the CWD positive and negative groups. Figure 2 shows survival decomposed by both sex and CWD status. The credible interval of CWD status stops overlapping when harvest begins. Survival curves of both sexes were very similar to one another given CWD status. The sex effect for the hazard rate was small in magnitude, with a credible interval that overlaps zero, suggesting little to no effect. However, all of these estimates are based on a small sample size for only a limited time scale, and consequently, they should be very cautiously interpreted.
 
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=6 in]{figures/Prevalence}
+\caption{The posterior distribution of prevalence of chronic wasting disease ($\psi$) obtained from the zero-inflated binomial model of observed CWD status. The mean of the posterior was \Sexpr{round(prevalence_out[1],3)} (grey dashed line) with an equal-tailed 95\% Bayesian credible interval of (\Sexpr{round(prevalence_out[2],3)},\Sexpr{round(prevalence_out[3],3)}) (red dashed lines).}\label{fig:Prevalence}
+\end{center}
+\end{figure}
 
+Incorporating the sensitivity of the RAMALT test only slightly increased the uncertainty of the posterior distributions. The standard deviations of the posterior distributions of all paramaters increased a small amount, as did the Bayesian credible intervals, but the means of the posteriors were pretty much identical to the results when sensitivity was ignored (not shown). The mean and credible intervals for prevalence of CWD were estimated as \Sexpr{round(prevalence_out[1],3)} (\Sexpr{round(prevalence_out[2],3)},\Sexpr{round(prevalence_out[3],3)}), and were identical for both models (Figure \ref{fig:Prevalence}).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%
-%%% Discussion
-%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Discussion}
+Further work will include a cause-specific survival analysis of adults and a survival analysis of fawns. As sample sizes increase, we can also increase the resolution of the time-step to daily.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%
 %%% References
 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\bibliography{survival_bib}
+\singlespacing
+\bibliography{survival}
 % \printbibliography
 
 

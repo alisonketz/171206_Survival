@@ -174,6 +174,11 @@ d.mort.ad=d.mort[-mort.rm,]
 n.mort=dim(d.mort.ad)[1]
 
 
+###
+### fixing the mis-labeled cause from collar to capture related
+###
+
+d.mort.ad$cause1[d.mort.ad$cause1=="Collar"]="Capture Related"
 
 ###
 ### initial format of data - rows = individuals, cols = (e_i,r_i,s_i,censor)
@@ -396,7 +401,7 @@ N.temp[N.temp[,10]==5716,9]=1
 ### Format data matrix to fit into jags
 ###
 
-N.data.fit = matrix(NA,nr=n.temp+n.mort-7,ncol=9)
+N.data.fit = matrix(NA,nr=n.temp+n.mort-8,ncol=9)
 
 indx = 1
 for(i in 1:n.temp){
@@ -504,9 +509,9 @@ cat("
 sink()
 
 #specify initial values
-inits<-list(list("beta0"=1,"beta1"=-1.5,"beta2"=1,"beta3"=.1,"p"=.6,"psi"=.04),
-            list("beta0"=-.5,"beta1"=.25,"beta2"=2,"beta3"=-.3,"p"=.5,"psi"=.1),
-            list("beta0"=1,"beta1"=.5,"beta2"=.5,"beta3"=1.6,"p"=.7,"psi"=.14)
+inits<-list(list("beta0"=1,"beta1"=-1.5,"beta2"=1,"beta3"=.1,"beta4"=1,"p"=.6,"psi"=.04),
+            list("beta0"=-.5,"beta1"=.25,"beta2"=2,"beta3"=-.3,"beta4"=.1,"p"=.5,"psi"=.1),
+            list("beta0"=1,"beta1"=.5,"beta2"=.5,"beta3"=1.6,"beta4"=.25,"p"=.7,"psi"=.14)
             )
 
 #identify params to monitor
@@ -526,7 +531,7 @@ jags.data <- list(records = n.fit,
                   right = N.data.fit[,2],
                   censor = N.data.fit[,3],
                   x1 = N.data.fit[,4],
-                  x2=N.data.fit[,8],
+                  x2=N.data.fit[,7],
                   n.weeks = study.end,
                   x4 = bow.harvest.haz,
                   x5 = gun.harvest.haz,
@@ -570,8 +575,6 @@ Upper=fit.quant[1:(4*n.weeks),5]
 out=data.frame(cbind(Weeks,Survival,Lower,Upper,SexCWD))
 out$SexCWD=as.factor(out$SexCWD)
 
-
-
 pdf("Survival_v8_sex.pdf", width=8, height =6)
 ggplot(data =out,aes(x = Weeks,y=Survival,group=SexCWD,color=SexCWD))+
     annotate('rect',xmax=gun.holiday.end.week, xmin=gun.holiday.start.week, ymax=Inf, ymin=-Inf, linetype=2,alpha=.5,fill="grey90")+
@@ -579,18 +582,19 @@ ggplot(data =out,aes(x = Weeks,y=Survival,group=SexCWD,color=SexCWD))+
     geom_line()+theme_bw()+
     geom_ribbon(aes(ymin=Lower,ymax=Upper,fill=SexCWD),alpha=.1,show.legend=NA,linetype=0)+
     scale_fill_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Female(-)","Male(-)","Female(+)","Male(+)"))+scale_colour_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Female(-)","Male(-)","Female(+)","Male(+)"))+
-    ggtitle("Survival")+xlab("Time(Weeks)")+ylab("Survival Probability")+
+    ggtitle("Survival")+xlab("Time")+ylab("Survival Probability")+
     geom_vline(aes(xintercept=bow.start.week-1),linetype=3,color="grey50")+
     geom_vline(aes(xintercept=gun.start.week-1),linetype=2,color="grey50")+
     geom_vline(aes(xintercept=gun.end.week),linetype=2,color="grey50")+
     geom_vline(aes(xintercept=gun.holiday.start.week),linetype=2,color="grey50")+
     geom_vline(aes(xintercept=gun.holiday.end.week),linetype=2,color="grey50")+
     geom_text(x=36.5,y=1.01,label="Bow",color="grey50",size=3.3)+
-    geom_text(x=45.5,y=1.01,label="Gun",color="grey50",size=3.3)
+    geom_text(x=45.5,y=1.01,label="Gun",color="grey50",size=3.3)+
+    scale_x_discrete(limit = c(1,12,24,35,44,52),labels = c("Jan","March","June","Sep 16","Nov 18","Jan 7"))
 dev.off()
 
 
- ###
+###
 ### Hazard analysis coefficients
 ### 
 fit.sum[(4*n.weeks+1):(4*n.weeks+5),]
@@ -703,6 +707,32 @@ print.xtable(xtable(survival_all_sum,caption = 'The summary statistics ',
              include.rownames=FALSE,
              rotate.colnames = FALSE,
              caption.placement = "top")  
+
+
+###
+### Prevalence posterior plot
+###
+
+out.psi.indx=dim(fit.sum)[1]
+fit.df=data.frame(rbind(out.cwd[[1]],out.cwd[[2]],out.cwd[[3]])[,out.psi.indx])
+
+plot(density(fit.df$Psi))
+names(fit.df)="Psi"
+
+cols=c("grey50","darkred")
+
+pdf("Prevalence.pdf",width=7,height=5)
+ggplot(data=fit.df,aes(x=Psi))+geom_density(size=1)+
+    geom_vline(aes(xintercept=fit.sum[out.psi.indx,1],color=cols[2]),linetype=2)+
+    geom_vline(aes(xintercept=fit.quant[out.psi.indx,1],color=cols[1]),linetype=2)+
+    geom_vline(aes(xintercept=fit.quant[out.psi.indx,5],color=cols[1]),linetype=2)+
+    scale_color_manual(values=cols,name="Posterior Statistics",labels=c("Mean = .147","Credible Interval = (.095,.207)"))+
+    ggtitle("Prevalence")+xlab(expression(psi))+ylab("Density")+
+    theme_bw()
+dev.off()
+
+
+prevalence.out=c(fit.sum[out.psi.indx,1],fit.quant[out.psi.indx,1],fit.quant[out.psi.indx,5])
 
 
 #saveworking directory

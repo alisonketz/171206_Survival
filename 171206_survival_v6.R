@@ -2,7 +2,6 @@
 ### Survival Analysis 
 ### A.Ketz 12/6/2017
 ###
-### Note that this must be run in 32-bit R because RODBC can only work in 32bit.
 ###
 ###
 
@@ -35,7 +34,7 @@ library(gridExtra)
 #load Access Database into R using Hmisc package with the function mdb.get (must use this on Linux)
 # database =mdb.get('~/Documents/Data/SWDPPdeerDB.MDB')
 
-d.cap=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Captures_adult_form_2017")
+d.cap=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Adult_Capture_2017_2018")
 d.fawncap=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Fawn Capture")
 d.mort=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Mortalities")
 d.cens=mdb.get('~/Documents/Data/SWDPPdeerDB.MDB',tables= "Censor")
@@ -53,6 +52,13 @@ for(i in 1:length(names(d.cap))){names(d.cap)[i]=paste(tolower(substr(names(d.ca
 for(i in 1:length(names(d.mort))){names(d.mort)[i]=paste(tolower(substr(names(d.mort)[i], 1, 1)),substr(names(d.mort)[i], 2, nchar(names(d.mort)[i])),sep="")}
 for(i in 1:length(names(d.cens))){names(d.cens)[i]=paste(tolower(substr(names(d.cens)[i], 1, 1)),substr(names(d.cens)[i], 2, nchar(names(d.cens)[i])),sep="")}
 
+### Double check loading correctly
+
+head(d.cap)
+head(d.mort)
+head(d.cens)
+head(d.fawncap)
+head(d.cwd)
 
 ###
 ### Number individuals within each dataframe
@@ -79,6 +85,23 @@ for(i in 1:n.cap){
 }
 d.cap$cwdstatus=as.factor(d.cap$cwdstatus)
 d.cap$cwdstatus=as.numeric(d.cap$cwdstatus)-1
+
+###
+### Adding the december gun harvested individual
+###
+
+empty=matrix(NA,nr=1,nc=dim(d.mort)[2])
+colnames(empty)=colnames(d.mort)
+d.mort=rbind(d.mort,empty)
+n.mort=dim(d.mort)[1]
+
+d.mort$lowtag[n.mort]=6843
+d.mort$cause1[n.mort]="Hunter harvest"
+d.mort$weapon[n.mort]="Rifle"
+d.mort$estMortDate=as.character(d.mort$estMortDate)
+d.mort$estMortDate[n.mort]="12/24/17 00:00:00"
+
+d.mort[dim(d.mort)[1],]
 
 ### 
 ### Dates
@@ -129,6 +152,7 @@ d.cens$captureDate = as.Date(d.cens$captureDate,format=c('%m/%d/%y'))
 #start of the study
 start.week=week(ymd('2017-01-09'))
 
+
 ###
 ### removing fawns from the mortality
 ###
@@ -140,6 +164,7 @@ for(l in 1:n.fawncap){
 d.mort.ad=d.mort[-mort.rm,]
 
 n.mort=dim(d.mort.ad)[1]
+
 
 ###
 ### initial format of data - rows = individuals, cols = (e_i,r_i,s_i,censor)
@@ -158,23 +183,50 @@ d.mort.ad$estMortDateDis = (week(d.mort.ad$estMortDate) - start.week + 1)
 #s
 d.mort.ad$collarFoundDis=(week(d.mort.ad$collarFound) - start.week + 1)
 
-max(d.mort.ad$collarFoundDis,na.rm=TRUE)
 
 
 #week cut-off for harvest 
 non.harvest.survival.end=week(ymd('2017-09-16'))-start.week
-non.harvest.survival.end
-harvest.start.week=week(ymd('2017-09-16'))-start.week+1
-harvest.start.week
-
+bow.start.week=week(ymd('2017-09-16'))-start.week+1
+bow.end.week = week(ymd('2018-01-07'))+52-start.week+1
 gun.start.week=week(ymd('2017-11-18'))-start.week+1
-gun.start.week
-
-study.end=max(d.mort.ad$estMortDateDis,na.rm=TRUE)
+gun.end.week = week(ymd('2017-11-26'))-start.week+1
+gun.holiday.start.week = week(ymd('2017-12-24'))-start.week+1
+gun.holiday.end.week = week(ymd('2018-01-01'))+52-start.week+1
+study.end=week(ymd('2018-01-07'))+52-start.week+1
 study.end
 
 d.mort.ad$bow=0
-d.mort.ad$bow[which(d.mort.ad$cause1=="Hunter harvest" & d.mort.ad$estMortDateDis<gun.start.week)]=1
+d.mort.ad$bow[which(d.mort.ad$weapon!="Rifle" & d.mort.ad$cause1 == "Hunter harvest")[-1]]=1
+
+d.mort.ad$bow
+# likely gun harvest
+which(d.mort.ad$weapon!="Rifle" & d.mort.ad$cause1 == "Hunter harvest")
+
+
+
+#setting harvest.season for derived parameters
+study.end
+n.weeks=study.end
+
+
+non.harvest.survival.end
+bow.start.week
+bow.end.week
+gun.start.week
+gun.end.week
+gun.holiday.start.week
+gun.holiday.end.week
+
+
+
+bow.harvest.hazard=bow.harvest.haz = c(rep(0,non.harvest.survival.end),rep(1,bow.end.week-bow.start.week+1))
+bow.harvest.hazard
+length(bow.harvest.haz)
+
+gun.harvest.haz=c(rep(0,gun.start.week-1),rep(1,gun.end.week-gun.start.week+1),rep(0,gun.holiday.start.week-gun.end.week),rep(1,gun.holiday.end.week-gun.holiday.start.week))
+length(gun.harvest.haz)
+gun.harvest.haz
 
 
 #########################################################################################################################3
@@ -184,6 +236,9 @@ d.mort.ad$bow[which(d.mort.ad$cause1=="Hunter harvest" & d.mort.ad$estMortDateDi
 ###
 #########################################################################################################################3
 
+rm.second.yr=which(d.cap$dateDis>12)
+d.cap=d.cap[-rm.second.yr,]
+n.cap=dim(d.cap)[1]
 
 ###
 ### N.temp[,1] = e
@@ -196,8 +251,6 @@ d.mort.ad$bow[which(d.mort.ad$cause1=="Hunter harvest" & d.mort.ad$estMortDateDi
 ### N.temp[,8] = sex
 ### N.temp[,9] = bow harvest
 ###
-
-
 
 #initialize matrix of captures/recaptures/morts
 N.temp = matrix(NA,nr=n.cap,nc = 10)
@@ -246,7 +299,6 @@ N.temp
 
 n.temp=dim(N.temp)[1]
 
-
 ###
 ### censoring individuals that were killed at capture
 ###
@@ -274,9 +326,7 @@ for(i in 1:(n.cap)){
     if(is.na(N.temp[i,2]))N.temp[i,2]=study.end
     if(is.na(N.temp[i,3]))N.temp[i,3]=study.end
 }
-N.temp
-
-
+tail(N.temp)
 
 #set harvest coefficient
 
@@ -304,7 +354,7 @@ N.temp[which(N.temp[,2]<N.temp[,1]),]
 ### Format data matrix to fit into jags
 ###
 
-N.data.fit = matrix(NA,nr=n.temp+n.mort-6,ncol=8)
+N.data.fit = matrix(NA,nr=n.temp+n.mort-7,ncol=8)
 
 indx = 1
 for(i in 1:n.temp){
@@ -323,15 +373,21 @@ for(i in 1:n.temp){
 #indexing records
 n.fit=dim(N.data.fit)[1]
 
-
+tail(N.data.fit)
 
 #for fast morts, remove the "living"contribution to survival lines
 mort.check=which(N.data.fit[,3]==0)-1
 rm.indx=c()
 for(i in mort.check){
-    if(N.data.fit[i,1]>N.data.fit[i,2])rm.indx=c(rm.indx,i)
+    if(N.data.fit[i,1]>=N.data.fit[i,2])rm.indx=c(rm.indx,i)
 }
 rm.indx
+
+
+N.temp[which(N.temp[,1:2]==5),]
+
+
+N.data.fit[rm.indx+1,]
 
 N.data.fit[sort(c(rm.indx,rm.indx+1)),]
 N.data.fit=N.data.fit[-rm.indx,]
@@ -343,40 +399,19 @@ n.fit
 
 
 #ensure no indexes of 0(
-for(i in 1:n.fit){
-    if(N.data.fit[i,3]==0 & N.data.fit[i,1]==N.data.fit[i,2]) N.data.fit[i,1] = N.data.fit[i,1] -1
-}
+# for(i in 1:n.fit){
+#     if(N.data.fit[i,3]==0 & N.data.fit[i,1]==N.data.fit[i,2]) cat(i,'\n')#N.data.fit[i,1] = N.data.fit[i,1] -1
+# }
 
 #indexing records
+# n.fit=dim(N.data.fit)[1]
+# n.fit
+
+#double check tail of data frame
+tail(N.data.fit)
+
+N.data.fit=N.data.fit[-n.fit,]
 n.fit=dim(N.data.fit)[1]
-n.fit
-
-
-#fix index 6
-head(N.data.fit)
-
-min(N.data.fit[,2])
-
-N.data.fit[1:10,]
-ch.indxx=which(N.data.fit[,2]==N.data.fit[,1])
-ch.indxx
-N.data.fit[ch.indxx,]
-N.data.fit=N.data.fit[-ch.indxx,]
-n.fit=dim(N.data.fit)[1]
-
-
-
-#setting harvest.season for derived parameters
-study.end
-n.weeks=study.end
-gun.harvest.haz=c(rep(0,gun.start.week-1),rep(1,study.end-gun.start.week+1))
-length(gun.harvest.haz)
-
-bow.harvest.haz = c(rep(0,non.harvest.survival.end),rep(1,gun.start.week-harvest.start.week),rep(0,study.end-gun.start.week+1))
-bow.harvest.haz
-# length(bow.harvest.haz)
-sum(bow.harvest.haz)
-
 
 
 #replace those bow harvested labeled with gun harvest, as 0...
@@ -386,6 +421,7 @@ N.data.fit[which(N.data.fit[,8]==1),6]=0
 # N.data.fit[which(N.data.fit[,3]==0 & N.data.fit[,6]==1)-1,6]=0
 # 
 # N.data.fit[which(N.data.fit[,3]==0 & N.data.fit[,8]==1)-1,8]=0
+
 
 
 ######################################################################################################################3
@@ -411,7 +447,7 @@ cat("
     # Likelihood for the total hazard
     for (j in 1:records) {
         for (k in left[j]:(right[j]-1)) {
-             UCH[j,k] <- exp(beta0 + beta1*x1[j]+beta2*x4[k]+beta3*x5[k] +beta4*x2[j])
+             UCH[j,k] <- exp(beta0 + beta1*x1[j]+beta2*x4[k]+beta3*x5[k]+beta4*x2[j])
         }
         # total prob of surviving
         SLR[j] <- exp(-sum(UCH[j,left[j]:(right[j]-1)])) 
@@ -422,7 +458,7 @@ cat("
     for (t in 1:n.weeks){
         llambda.out[t,1]<-beta0 + beta2*x4[t] +beta3*x5[t] #Female CWD-
         llambda.out[t,2]<-beta0 + beta2*x4[t] +beta3*x5[t] + beta4 #Male CWD -
-       llambda.out[t,3]<-beta0 + beta1 + beta2*x4[t] + beta3*x5[t] #Female CWD+
+        llambda.out[t,3]<-beta0 + beta1 + beta2*x4[t] + beta3*x5[t] #Female CWD+
         llambda.out[t,4]<-beta0 + beta1 + beta2*x4[t] + beta3*x5[t] + beta4 #Male CWD +
         for(j in 1:4){
             UCH0[t,j]<-exp(llambda.out[t,j])
@@ -505,17 +541,16 @@ ggplot(data =out,aes(x = Weeks,y=Survival,group=SexCWD,color=SexCWD))+geom_line(
     geom_ribbon(aes(ymin=Lower,ymax=Upper,fill=SexCWD),alpha=.1,show.legend=NA,linetype=0)+
     scale_fill_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Female(-)","Male(-)","Female(+)","Male(+)"))+scale_colour_manual(values=cbPalette,name="Sex(CWD Status)",labels=c("Female(-)","Male(-)","Female(+)","Male(+)"))+
     ggtitle("Survival")+xlab("Time(Weeks)")+ylab("Survival Probability")+
-    geom_vline(aes(xintercept=harvest.start.week-1),linetype=2,color="grey50")+
+    geom_vline(aes(xintercept=bow.start.week-1),linetype=2,color="grey70")+
     geom_vline(aes(xintercept=gun.start.week-1),linetype=2,color="grey50")+
-    geom_text(x=37,y=1,label="Bow",color="grey50")+
-    geom_text(x=46.5,y=1,label="Gun",color="grey50")
+    geom_vline(aes(xintercept=gun.end.week),linetype=2,color="grey50")+
+    geom_vline(aes(xintercept=gun.holiday.start.week),linetype=2,color="grey50")+
+    geom_vline(aes(xintercept=gun.holiday.end.week),linetype=2,color="grey50")+
+    geom_text(x=36.5,y=1,label="Bow",color="grey70")+
+    geom_text(x=45.5,y=1,label="Gun",color="grey50")
 dev.off()
 
  
-
-
-save.image("survival_v6.Rdata")
-
 ###
 ### Hazard analysis coefficients
 ### 
@@ -549,16 +584,15 @@ survival_summary
 write.csv(survival_summary,file="survival_summary_v6.csv",row.names = FALSE)
 
 
-save.image("survival_v6.Rdata")
-
-
 ###
 ### Table with survival before/after bow and gun hunts
 ###
 
-pre.end=35
-bow.end=44
-gun.end=n.weeks
+pre.end=non.harvest.survival.end
+bow.end=gun.start.week-1
+gun1.end=gun.end.week
+bow2.end=gun.holiday.start.week-1
+gun2.end=gun.holiday.end.week
 
 fit.sum[c(pre.end,n.weeks+pre.end,2*n.weeks+pre.end,3*n.weeks+pre.end),1]
 
@@ -571,8 +605,6 @@ pre.harvest[,1]=c("Negative","","Positive","")
 pre.harvest[,2]=c("Female","Male","Female","Male")
 names(pre.harvest)=c("CWD Status","Sex","Mean","SD","0.025","0.975")
 
-
-
 post.bow.harvest=cbind(fit.sum[c(bow.end,n.weeks+bow.end,2*n.weeks+bow.end,3*n.weeks+bow.end),1],fit.sum[c(bow.end,n.weeks+bow.end,2*n.weeks+bow.end,3*n.weeks+bow.end),2],fit.quant[c(bow.end,n.weeks+bow.end,2*n.weeks+bow.end,3*n.weeks+bow.end),1],fit.quant[c(bow.end,n.weeks+bow.end,2*n.weeks+bow.end,3*n.weeks+bow.end),5])
 post.bow.harvest=round(post.bow.harvest,3)
 post.bow.harvest
@@ -582,19 +614,41 @@ post.bow.harvest[,1]=c("Negative","","Positive","")
 post.bow.harvest[,2]=c("Female","Male","Female","Male")
 names(post.bow.harvest)=c("CWD Status","Sex","Mean","SD","0.025","0.975")
 
+post.gun1.harvest=cbind(fit.sum[c(gun1.end,n.weeks+gun1.end,2*n.weeks+gun1.end,3*n.weeks+gun1.end),1],fit.sum[c(gun1.end,n.weeks+gun1.end,2*n.weeks+gun1.end,3*n.weeks+gun1.end),2],fit.quant[c(gun1.end,n.weeks+gun1.end,2*n.weeks+gun1.end,3*n.weeks+gun1.end),1],fit.quant[c(gun1.end,n.weeks+gun1.end,2*n.weeks+gun1.end,3*n.weeks+gun1.end),5])
+post.gun1.harvest=round(post.gun1.harvest,3)
+post.gun1.harvest
+post.gun1.harvest=data.frame(post.gun1.harvest)
+post.gun1.harvest=cbind(rep(NA,4),rep(NA,4),post.gun1.harvest)
+post.gun1.harvest[,1]=c("Negative","","Positive","")
+post.gun1.harvest[,2]=c("Female","Male","Female","Male")
+names(post.gun1.harvest)=c("CWD Status","Sex","Mean","SD","0.025","0.975")
 
-post.gun.harvest=cbind(fit.sum[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),1],fit.sum[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),2],fit.quant[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),1],fit.quant[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),5])
-post.gun.harvest=round(post.gun.harvest,3)
-post.gun.harvest
-post.gun.harvest=data.frame(post.gun.harvest)
-post.gun.harvest=cbind(rep(NA,4),rep(NA,4),post.gun.harvest)
-post.gun.harvest[,1]=c("Negative","","Positive","")
-post.gun.harvest[,2]=c("Female","Male","Female","Male")
-names(post.gun.harvest)=c("CWD Status","Sex","Mean","SD","0.025","0.975")
+post.bow2.harvest=cbind(fit.sum[c(bow2.end,n.weeks+bow2.end,2*n.weeks+bow2.end,3*n.weeks+bow2.end),1],fit.sum[c(bow2.end,n.weeks+bow2.end,2*n.weeks+bow2.end,3*n.weeks+bow2.end),2],fit.quant[c(bow2.end,n.weeks+bow2.end,2*n.weeks+bow2.end,3*n.weeks+bow2.end),1],fit.quant[c(bow2.end,n.weeks+bow2.end,2*n.weeks+bow2.end,3*n.weeks+bow2.end),5])
+post.bow2.harvest=round(post.bow2.harvest,3)
+post.bow2.harvest
+post.bow2.harvest=data.frame(post.bow2.harvest)
+post.bow2.harvest=cbind(rep(NA,4),rep(NA,4),post.bow2.harvest)
+post.bow2.harvest[,1]=c("Negative","","Positive","")
+post.bow2.harvest[,2]=c("Female","Male","Female","Male")
+names(post.bow2.harvest)=c("CWD Status","Sex","Mean","SD","0.025","0.975")
 
-Period=c("Pre-Harvest","","","","Post Bow/Archery","","","","Post Gun","","","")
+post.gun2.harvest=cbind(fit.sum[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),1],fit.sum[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),2],fit.quant[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),1],fit.quant[c(n.weeks,2*n.weeks,3*n.weeks,4*n.weeks),5])
+post.gun2.harvest=round(post.gun2.harvest,3)
+post.gun2.harvest
+post.gun2.harvest=data.frame(post.gun2.harvest)
+post.gun2.harvest=cbind(rep(NA,4),rep(NA,4),post.gun2.harvest)
+post.gun2.harvest[,1]=c("Negative","","Positive","")
+post.gun2.harvest[,2]=c("Female","Male","Female","Male")
+names(post.gun2.harvest)=c("CWD Status","Sex","Mean","SD","0.025","0.975")
 
-survival_all_sum=data.frame(cbind(Period,rbind(pre.harvest,post.bow.harvest,post.gun.harvest)))
+Period=c("Pre-Harvest","","","","Post Bow/Archery 1","","","","Post Gun 1","","","","Post Bow/Archery 2","","","","Post Gun 2","","","")
+
+survival_all_sum=data.frame(cbind(Period,rbind(pre.harvest,post.bow.harvest,post.gun1.harvest,post.bow2.harvest,post.gun2.harvest)))
 survival_all_sum
 
 write.csv(survival_all_sum,"survival_all_sum_v6.csv",row.names=FALSE)
+
+
+
+#saveworking directory
+save.image("survival_v6.Rdata")

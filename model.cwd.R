@@ -7,13 +7,23 @@
     beta2 ~ dnorm(0, 1.0E-6) # bow harvest effect log hazard rate
     beta3 ~ dnorm(0, 1.0E-6) # gun harvest effect log hazard rate
 
+    # Zero-inflated sensitivity of RAMALT
+    for(j in 1:records){
+        temp[j] <-p*z[j]
+        x1[j] ~ dbin(temp[j],1)
+        z[j] ~ dbin(psi,1)
+    }
+
+    p ~ dbeta(92.5,44.5)#based on sensitivity of Thomsen et al 2012
+    psi~dbeta(1,1)
+
     # Likelihood for the total hazard
     for (j in 1:records) {
         for (k in left[j]:(right[j]-1)) {
-            UCH[j,k] <- exp(beta0 + beta1*x1[j]+beta2*x4[k]+beta3*x5[k])
+            UCH[j,k] <- exp(beta0 + beta1*z[j]+beta2*x4[k]+beta3*x5[k])
         }
         
-        # total prob of surviving
+        # total prob of survivingy
         SLR[j] <- exp(-sum(UCH[j,left[j]:(right[j]-1)])) 
         censor[j] ~ dbern(SLR[j])      
     }

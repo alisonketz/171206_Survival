@@ -1,0 +1,39 @@
+\begin{thebibliography}{6}
+\providecommand{\natexlab}[1]{#1}
+
+\bibitem[{Gaillard \emph{et~al.}(1998)Gaillard, Festa-Bianchet \&
+  Yoccoz}]{gaillard_population_1998}
+Gaillard, J.M., Festa-Bianchet, M. \& Yoccoz, N.G. (1998) Population dynamics
+  of large herbivores: variable recruitment with constant adult survival.
+  \emph{Trends in Ecology \& Evolution} \textbf{13}, 58--63.
+
+\bibitem[{Hobbs \& Hooten(2015)}]{hobbs_bayesian_2015}
+Hobbs, N.T. \& Hooten, M.B. (2015) \emph{Bayesian models: a statistical primer
+  for ecologists}. Princeton University Press, Princeton, New Jersey, USA.
+
+\bibitem[{Kalbfleisch(2002)}]{kalbfleisch_statistical_2002}
+Kalbfleisch, J.D. (2002) \emph{The statistical analysis of failure time data}.
+  2nd ed. Hoboken, N.J. : J. Wiley, [2002] ©2002.
+
+\bibitem[{Plummer(2004)}]{plummer_jags:_2004}
+Plummer, M. (2004) \emph{{JAGS}: {Just} another {Gibbs} sampler}.
+
+\bibitem[{Thomsen \emph{et~al.}(2012)Thomsen, Schneider, O’Rourke, Gidlewski,
+  McLane, Allen, McIsaac, Mitchell, Keane, Spraker \&
+  Balachandran}]{thomsen_diagnostic_2012}
+Thomsen, B.V., Schneider, D.A., O’Rourke, K.I., Gidlewski, T., McLane, J.,
+  Allen, R.W., McIsaac, A.A., Mitchell, G.B., Keane, D.P., Spraker, T.R. \&
+  Balachandran, A. (2012) Diagnostic accuracy of rectal mucosa biopsy testing
+  for chronic wasting disease within white-tailed deer ({Odocoileus}
+  virginianus) herds in {North} {America}: {Effects} of age, sex, polymorphism
+  at {PRNP} codon 96, and disease progression. \emph{Journal of Veterinary
+  Diagnostic Investigation} \textbf{24}, 878--887.
+
+\bibitem[{Walsh \emph{et~al.}(2017)Walsh, Norton, Storm, Van~Deelen \&
+  Heisey}]{walsh_using_2017}
+Walsh, D.P., Norton, A.S., Storm, D.J., Van~Deelen, T.R. \& Heisey, D.M. (2017)
+  Using expert knowledge to incorporate uncertainty in cause-of-death
+  assignments for modeling of cause-specific mortality. \emph{Ecology and
+  Evolution} pp. n/a--n/a.
+
+\end{thebibliography}

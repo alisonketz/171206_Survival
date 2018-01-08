@@ -1,0 +1,16 @@
+\begin{table}[H]
+\centering
+\caption{Coefficients of the hazard rate analysis where the baseline hazard shows the hazard for chronic wasting disease positive adult individuals not exposed to harvest, with additive hazard effects in the following three rows. The first column denotes the mean of the posterior distribution with the standard deviation (SD), and equal-tailed Bayesian credible intervals in the right two columns.}
+\label{tab:hazard_v7}
+\begin{tabular}{ccccc}
+ Coefficient & Mean & SD & .025 & .975 \\
+  \hline
+CWD(-), No harvest & -5.91 & 0.3 & -6.53 & -5.36 \\
+  CWD(+), No harvest & 1.8 & 0.5 & 0.79 & 2.74 \\
+  Bow Harvest & 0.89 & 0.37 & 0.17 & 1.61 \\
+  Gun Harvest & 1.07 & 0.43 & 0.19 & 1.89 \\
+   \hline
+\end{tabular}
+\end{table}
+\efloatseparator
+ 
